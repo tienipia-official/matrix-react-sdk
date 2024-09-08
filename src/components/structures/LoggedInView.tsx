@@ -77,6 +77,8 @@ import { ConfigOptions } from "../../SdkConfig";
 import { MatrixClientContextProvider } from "./MatrixClientContextProvider";
 import { Landmark, LandmarkNavigation } from "../../accessibility/LandmarkNavigation";
 
+import DMRoomMap from "../../utils/DMRoomMap";
+
 // We need to fetch each pinned message individually (if we don't already have it)
 // so each pinned message may trigger a request. Limit the number per room for sanity.
 // NB. this is just for server notices rather than pinned messages in general.
@@ -171,6 +173,14 @@ class LoggedInView extends React.Component<IProps, IState> {
     handleMessage = (event) => {
         if (event.data.type === "MATRIX_REDIRECT") {
             location.href = event.data.url;
+        } else if (event.data.type === "MATRIX_USER") {
+            const dmRooms = DMRoomMap.shared().getDMRoomsForUserId(event.data.id);
+
+            if (dmRooms.length > 0) {
+                location.href = "#/room/" + dmRooms[0];
+            } else {
+                location.href = "#/user/" + event.data.id;
+            }
         }
     };
 
