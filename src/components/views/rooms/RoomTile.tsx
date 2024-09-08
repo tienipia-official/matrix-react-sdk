@@ -54,6 +54,9 @@ import { UIComponent } from "../../../settings/UIFeature";
 import { isKnockDenied } from "../../../utils/membership";
 import SettingsStore from "../../../settings/SettingsStore";
 
+import DMRoomMap from "../../../utils/DMRoomMap";
+import ApiService from "../../../api";
+
 interface Props {
     room: Room;
     showMessagePreview: boolean;
@@ -68,6 +71,7 @@ interface ClassProps extends Props {
 type PartialDOMRect = Pick<DOMRect, "left" | "bottom">;
 
 interface State {
+    description: string | null;
     selected: boolean;
     notificationsMenuPosition: PartialDOMRect | null;
     generalMenuPosition: PartialDOMRect | null;
@@ -95,6 +99,7 @@ export class RoomTile extends React.PureComponent<ClassProps, State> {
         super(props);
 
         this.state = {
+            description: null,
             selected: SdkContextClass.instance.roomViewStore.getRoomId() === this.props.room.roomId,
             notificationsMenuPosition: null,
             generalMenuPosition: null,
@@ -154,7 +159,7 @@ export class RoomTile extends React.PureComponent<ClassProps, State> {
         }
     }
 
-    public componentDidMount(): void {
+    public async componentDidMount(): Promise<void> {
         // when we're first rendered (or our sublist is expanded) make sure we are visible if we're active
         if (this.state.selected) {
             this.scrollIntoView();
@@ -171,9 +176,16 @@ export class RoomTile extends React.PureComponent<ClassProps, State> {
         this.props.room.on(RoomEvent.Name, this.onRoomNameUpdate);
         CallStore.instance.on(CallStoreEvent.Call, this.onCallChanged);
 
+        const userId = DMRoomMap.shared().getUserIdForRoomId(this.props.room.roomId);
+        let description = null;
+
+        if (userId) {
+            description = await ApiService.userDescription(this.props.room.client.getAccessToken()!, userId);
+        }
+
         // Recalculate the call for this room, since it could've changed between
         // construction and mounting
-        this.setState({ call: CallStore.instance.getCall(this.props.room.roomId) });
+        this.setState({ call: CallStore.instance.getCall(this.props.room.roomId), description });
     }
 
     public componentWillUnmount(): void {
@@ -429,11 +441,19 @@ export class RoomTile extends React.PureComponent<ClassProps, State> {
             mx_RoomTile_titleHasUnreadEvents: this.notificationState.isUnread,
         });
 
-        const titleContainer = this.props.isMinimized ? null : (
+        const titleContainer = this.props.isMinimized ? null : this.state.description == null ? (
             <div className="mx_RoomTile_titleContainer">
                 <div title={name} className={titleClasses} tabIndex={-1}>
                     <span dir="auto">{name}</span>
                 </div>
+                {subtitle}
+            </div>
+        ) : (
+            <div className="mx_RoomTile_titleContainer">
+                <div title={name} className={titleClasses} tabIndex={-1}>
+                    <small dir="auto">{name}</small>
+                </div>
+                <small>{this.state.description}</small>
                 {subtitle}
             </div>
         );
