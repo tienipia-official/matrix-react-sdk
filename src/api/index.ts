@@ -16,20 +16,32 @@ class ApiService {
                 return null;
             }
         } else {
-            const response = await this.axios.get("https://api.jaewon.co.kr", {
-                params: {
-                    t: Date.now(),
-                    accessToken,
-                    userId,
-                },
-            });
+            try {
+                const response = await this.axios.post(
+                    "https://api.jaewon.co.kr/_matrix-internal/users/v1/description",
+                    JSON.stringify({
+                        userId,
+                        accessToken,
+                    }),
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        params: {
+                            t: Date.now(),
+                        },
+                    },
+                );
 
-            const description = response.data?.description ?? "No description";
+                const description = response.data?.description ?? "No description";
 
-            if (description !== "No description") {
-                this.userDetailMap.set(userId, description);
+                if (description !== "No description") {
+                    this.userDetailMap.set(userId, description);
+                }
+                return description;
+            } catch (e) {
+                return null;
             }
-            return description;
         }
     }
 }
