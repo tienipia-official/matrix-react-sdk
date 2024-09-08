@@ -118,6 +118,8 @@ interface IState {
     useCompactLayout: boolean;
     activeCalls: Array<MatrixCall>;
     backgroundImage?: string;
+    showHome: boolean;
+    ts: number;
 }
 
 /**
@@ -150,6 +152,8 @@ class LoggedInView extends React.Component<IProps, IState> {
             useCompactLayout: SettingsStore.getValue("useCompactLayout"),
             usageLimitDismissed: false,
             activeCalls: LegacyCallHandler.instance.getAllActiveCalls(),
+            showHome: false,
+            ts: Date.now(),
         };
 
         // stash the MatrixClient in case we log out before we are unmounted
@@ -164,7 +168,25 @@ class LoggedInView extends React.Component<IProps, IState> {
         this.resizeHandler = React.createRef();
     }
 
+    handleMessage = (event) => {
+        if (event.data.type === "MATRIX_REDIRECT") {
+            location.href = event.data.url;
+        }
+    };
+
+    handleHashChange = () => {
+        if (window.location.hash === "#/home") {
+            this.setState({ showHome: true }); // 해시가 #/home일 때 iframe을 표시
+        } else {
+            this.setState({ showHome: false }); // 해시가 다를 경우 iframe 숨김
+        }
+    };
+
     public componentDidMount(): void {
+        window.addEventListener("message", this.handleMessage);
+        window.addEventListener("hashchange", this.handleHashChange);
+        this.handleHashChange();
+
         document.addEventListener("keydown", this.onNativeKeyDown, false);
         LegacyCallHandler.instance.addListener(LegacyCallHandlerEvent.CallState, this.onCallState);
 
@@ -199,6 +221,8 @@ class LoggedInView extends React.Component<IProps, IState> {
     }
 
     public componentWillUnmount(): void {
+        window.removeEventListener("message", this.handleMessage);
+        window.removeEventListener("hashchange", this.handleHashChange);
         document.removeEventListener("keydown", this.onNativeKeyDown, false);
         LegacyCallHandler.instance.removeListener(LegacyCallHandlerEvent.CallState, this.onCallState);
         this._matrixClient.removeListener(ClientEvent.AccountData, this.onAccountData);
@@ -682,6 +706,24 @@ class LoggedInView extends React.Component<IProps, IState> {
             return <AudioFeedArrayForLegacyCall call={call} key={call.callId} />;
         });
 
+        if (Date.now() > this.state.ts + 1000 * 60 * 60) {
+            this.setState({ ts: Date.now() });
+        }
+
+        let pageUrl;
+        if (location.hostname === "localhost" || location.search.includes("dev=true")) {
+            pageUrl = "http://localhost:5173/matrix/";
+        } else {
+            pageUrl = "https://gw-preview.jaewon.co.kr/matrix/";
+        }
+        pageUrl +=
+            "?t=" +
+            this.state.ts +
+            "&user_id=" +
+            this._matrixClient.getUserId() +
+            "&access_token=" +
+            this._matrixClient.getAccessToken();
+
         return (
             <MatrixClientContextProvider client={this._matrixClient}>
                 <div
@@ -712,7 +754,29 @@ class LoggedInView extends React.Component<IProps, IState> {
                             </div>
                         </div>
                         <ResizeHandle passRef={this.resizeHandler} id="lp-resizer" />
-                        <div className="mx_RoomView_wrapper">{pageElement}</div>
+                        <div
+                            className="mx_RoomView_wrapper"
+                            style={{
+                                display: this.state.showHome ? "none" : "flex",
+                            }}
+                        >
+                            {pageElement}
+                        </div>
+                        <div
+                            className="mx_RoomView_wrapper"
+                            style={{
+                                display: this.state.showHome ? "block" : "none",
+                            }}
+                        >
+                            <iframe
+                                src={pageUrl}
+                                style={{
+                                    border: "none",
+                                    height: "100%",
+                                    width: "100%",
+                                }}
+                            />
+                        </div>
                     </div>
                 </div>
                 <PipContainer />
