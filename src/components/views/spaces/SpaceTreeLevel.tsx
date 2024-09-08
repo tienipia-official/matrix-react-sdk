@@ -136,7 +136,12 @@ export const SpaceButton = <T extends keyof JSX.IntrinsicElements>({
         // space is set here because of the assignment condition of onClick
         defaultDispatcher.dispatch({ action: Action.ViewRoom, room_id: space!.roomId });
     const activateSpace = (): void => {
-        if (spaceKey) SpaceStore.instance.setActiveSpace(spaceKey);
+        if (spaceKey) {
+            SpaceStore.instance.setActiveSpace(spaceKey);
+            if (spaceKey === "home-space" && location.hash !== "#/home") {
+                location.href = "#/home";
+            }
+        }
     };
     const onClick = props.onClick ?? (selected && space ? viewSpaceHome : activateSpace);
 
