@@ -74,6 +74,8 @@ import AskInviteAnywayDialog, { UnknownProfiles } from "./AskInviteAnywayDialog"
 import { SdkContextClass } from "../../../contexts/SDKContext";
 import { UserProfilesStore } from "../../../stores/UserProfilesStore";
 
+import ApiService from "../../../api";
+
 // we have a number of types defined from the Matrix spec which can't reasonably be altered here.
 /* eslint-disable camelcase */
 
@@ -176,7 +178,12 @@ interface IDMRoomTileProps {
     isSelected: boolean;
 }
 
-class DMRoomTile extends React.PureComponent<IDMRoomTileProps> {
+class DMRoomTile extends React.PureComponent<IDMRoomTileProps, { description: string | null }> {
+    public constructor(props: IDMRoomTileProps) {
+        super(props);
+        this.state = { description: null };
+    }
+
     private onClick = (e: ButtonEvent): void => {
         // Stop the browser from highlighting text
         e.preventDefault();
@@ -184,6 +191,12 @@ class DMRoomTile extends React.PureComponent<IDMRoomTileProps> {
 
         this.props.onToggle(this.props.member);
     };
+
+    public async componentDidMount(): Promise<void> {
+        const matrixClient = MatrixClientPeg.safeGet();
+        let description = await ApiService.userDescription(matrixClient.getAccessToken()!, this.props.member.userId);
+        this.setState({ description });
+    }
 
     private highlightName(str: string): ReactNode {
         if (!this.props.highlightWord) return str;
@@ -280,7 +293,7 @@ class DMRoomTile extends React.PureComponent<IDMRoomTileProps> {
                     <div className="mx_InviteDialog_tile_nameStack_name">
                         {this.highlightName(this.props.member.name)}
                     </div>
-                    <div className="mx_InviteDialog_tile_nameStack_userId">{caption}</div>
+                    <div className="mx_InviteDialog_tile_nameStack_userId">{this.state.description}</div>
                 </span>
                 {timestamp}
             </AccessibleButton>
