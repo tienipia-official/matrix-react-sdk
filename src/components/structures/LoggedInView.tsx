@@ -185,11 +185,12 @@ class LoggedInView extends React.Component<IProps, IState> {
     };
 
     handleHashChange = () => {
-        if (window.location.hash === "#/home") {
-            this.setState({ showHome: true }); // 해시가 #/home일 때 iframe을 표시
-        } else {
-            this.setState({ showHome: false }); // 해시가 다를 경우 iframe 숨김
-        }
+        // Temporary disable iframe
+        // if (window.location.hash === "#/home") {
+        //     this.setState({ showHome: true }); // 해시가 #/home일 때 iframe을 표시
+        // } else {
+        //     this.setState({ showHome: false }); // 해시가 다를 경우 iframe 숨김
+        // }
     };
 
     public componentDidMount(): void {
